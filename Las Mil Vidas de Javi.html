@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Las Mil Vidas de Javi</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#2b2358;--card:#1d1b3a;--ink:#fff4e0;--mut:#b9b2e0;--or:#ff8a3d;--tl:#2fd6c4;--pk:#ff5d8f;--line:#4b4590;color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:500 16px/1.4 "Baloo 2",ui-rounded,system-ui,sans-serif}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;top:0;left:0;right:0;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 8px) 8px 8px;background:rgba(29,27,58,.9);backdrop-filter:blur(8px)}
+.chip{background:#2b2766;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-weight:700;font-size:14px;white-space:nowrap}
+.dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);display:flex;flex-direction:column;align-items:center;gap:6px}
+#dice{font-size:54px;font-weight:800;height:64px;line-height:64px;color:var(--or);text-shadow:0 3px 0 #1d1b3a}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:12px 18px;margin-top:10px;background:var(--or);color:#1d1b3a;font:800 18px "Baloo 2",system-ui,sans-serif;cursor:pointer}
+.btn.sec{background:#2b2766;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.dock .btn{width:auto;padding:14px 36px;font-size:22px;margin:0}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(20,16,50,.62)}
+.card{width:100%;max-width:520px;max-height:86vh;overflow-y:auto;background:var(--card);border:2px solid var(--or);border-radius:22px;padding:20px}
+h1{font-size:34px;line-height:1.05;font-weight:800;color:var(--or)}
+h2{font-size:26px;line-height:1.1;font-weight:800;margin-bottom:6px}
+.sub{color:var(--tl);font-weight:700;margin:6px 0 10px}
+.lv{color:var(--mut);font-size:14px;margin-bottom:8px}
+.em{font-size:56px;line-height:1}
+.opt{display:block;width:100%;text-align:left;margin-top:10px;padding:10px 14px;border-radius:14px;border:1px solid var(--line);background:#2b2766;color:var(--ink);font:inherit;cursor:pointer}
+.opt b{display:block;font-size:17px}
+.opt span{color:var(--mut);font-size:14px}
+.opt:hover,.opt:focus-visible{border-color:var(--tl)}
+.btn:focus-visible,.opt:focus-visible{outline:3px solid var(--tl);outline-offset:2px}
+.fx{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.fx span{background:#2b2766;border:1px solid var(--tl);border-radius:999px;padding:1px 10px;font-weight:700}
+.warn{color:var(--pk);font-weight:700}
+.u{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)}
+.u i{font-style:normal;font-size:26px}
+.u span{display:block;color:var(--mut);font-size:14px}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="hud" id="hud" hidden></div>
+<div class="dock" id="dock" hidden><div id="dice"></div><button class="btn" id="roll">Tirar dado</button></div>
+<div class="ov" id="ov" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=s=>document.querySelector(s),T=30;
+const L={d:'€',a:'Ánimo',e:'Energía',c:'Cartas',v:'Vidas'};
+const LV=['Nivel 1: modo tutorial','Nivel 2: modo difícil','Nivel 3: jefe final'];
+const EV=[[
+['Sobres Pokémon','La tienda ha recibido sobres nuevos y huele a carta brillante.',[['Comprar 3 sobres','Caro, pero ilusión máxima.',{d:-60,c:2,a:5}],['Comprar solo 1','Prudente y con suerte.',{d:-20,c:1}],['Ahorrar','El bolsillo respira.',{d:30,a:-5}]]],
+['Directo a las 3 am','Tu streamer favorito empieza directo de madrugada.',[['Verlo entero','Mañana serás un zombi feliz.',{e:-25,a:15}],['Dormir','El directo queda en diferido.',{e:20,a:-5}],['Verlo con un Monster','Energía prestada.',{e:-10,a:10,d:-3}]]],
+['Cinco gatos, cero paciencia','A las 7 am los 5 gatos te rodean exigiendo desayuno.',[['Pienso premium','Maullidos de gratitud.',{d:-40,a:15}],['Pienso normal','Aceptable para el tribunal felino.',{d:-15,a:5}],['Hacerse el dormido','Los gatos no se lo creen.',{a:-15,e:-5}]]],
+['Gran Premio en casa','Hoy hay carrera de F1 y el sofá te llama.',[['Verla con snacks','Gloria dominical.',{d:-20,a:15,e:-5}],['Apostar con colegas','Todo o nada.',[{d:120,a:10},{d:-80,a:-10}]],['Ver solo el final','Eficiencia pura.',{a:5,e:5}]]],
+['Rebajas de videojuegos','Tu lista de deseados está en oferta.',[['Comprar el juego nuevo','Diversión asegurada.',{d:-70,a:20,e:-10}],['Esperar otra oferta','Paciencia gamer.',{a:-5}],['Vender uno viejo','Dinero rápido.',{d:60,a:-5}]]]
+],[
+['MotoGP en directo','Salen entradas para ver el Gran Premio en el circuito.',[['Comprar y viajar','Experiencia inolvidable.',{d:-200,a:30,e:-20}],['Verlo en un bar','Con tapas y ruido de motores.',{d:-30,a:10}],['Dejarlo pasar','Mañana te arrepentirás.',{a:-10}]]],
+['Boss imposible','Llevas 3 horas atascado en el mismo jefe final.',[['Insistir hasta ganar','Victoria o ataque de nervios.',[{a:25,e:-30},{a:-25,e:-30}]],['Buscar una guía','Cero orgullo, cero sufrimiento.',{a:10,e:-5}],['Apagar la consola','Tregua digna.',{a:-10,e:10}]]],
+['Gato en el teclado','Un gato pisa el botón y borra tu partida.',[['Perdonarlo','Cara de inocente, culpa cero.',{a:10}],['Regañarlo','Te ignora con elegancia.',{a:-5,e:-5}],['Empezar de nuevo','Ahora con el gato en las rodillas.',{a:15,e:-15}]]],
+['Carta rara en Wallapop','Una carta de tus sueños a un precio sospechoso.',[['Comprar sin dudar','Puede ser un tesoro o una estafa.',[{d:-150,c:3},{d:-150,a:-20}]],['Negociar el precio','El vendedor contesta a ratos.',{d:-80,c:1}],['Pasar','La FOMO te susurra.',{a:-5}]]],
+['Sin dormir','Llevas días de directos, carreras y cartas.',[['Monster doble','Alas y taquicardia.',{e:25,a:-10,d:-5}],['Siesta de 2 horas','El mejor fichaje del año.',{e:30,a:5}],['Seguir como si nada','Tu cuerpo tiene una opinión.',{e:-25,v:-1}]]]
+],[
+['Torneo de cartas','El local organiza un torneo de cartas Pokémon.',[['Participar','Mazo en mano.',[{c:3,d:150},{c:-1,a:-15}]],['Mirar desde la grada','Aprender también cuenta.',{a:5}],['Cambiar cartas','Un trato justo, casi.',{c:1,d:-30}]]],
+['Casa más grande','Los gatos miran con desprecio el rascador viejo.',[['Torre de gatos','Un rascador de lujo.',{d:-200,a:25}],['Rascadores caseros','Cartón y esfuerzo.',{d:-30,a:10,e:-10}],['No hacer nada','Los gatos toman nota.',{a:-15}]]],
+['Canal de streaming','Te proponen abrir tu propio canal.',[['Empezar el canal','Fama, ojeras y suscriptores.',{d:200,e:-30,a:10}],['Probar un día','Ensayo general.',{d:50,e:-10}],['Seguir de espectador','Primera fila, sin presión.',{a:10}]]],
+['Mario Kart a lo F1','Final de campeonato en el salón, con caparazones azules.',[['Ir a por la victoria','Pole position o cabezazo.',[{a:25,d:100},{a:-15,e:-10}]],['Jugar relajado','Sin caparazones, sin rencor.',{a:10}],['Jugar con los gatos mirando','Público exigente.',{a:15,e:-5}]]],
+['Recta final','La meta está a pocas casillas.',[['Todo o nada','Mucho en juego.',[{d:300,a:20},{d:-300,e:-30}]],['Ir tranquilo','Sin prisa, con estilo.',{a:10,e:10}],['Brindar con un Monster','Como en el podio.',{e:25,a:10,d:-5}]]]
+]];
+const E=[
+['Respawn en el sofá','Te quedas sin vidas, pero los 5 gatos te hacen sitio en el sofá. Partida guardada.','🛋️'],
+['Coleccionista PSA 10','Tu colección de cartas vale más que el coche. Los gatos la vigilan como dragones.','🃏'],
+['Rey de los gatos','Con tanto dinero compras una finca. Ahora tienes 5 gatos… y 45 más.','👑'],
+['Zen gatuno','Cartas, carreras y gatos ronroneando. Paz absoluta, nada puede salir mal.','🧘'],
+['Voltaje máximo','Tanta energía que sales disparado y llegas a la meta antes que el dado.','⚡'],
+['Maestro Pokémon','Completas el álbum y te nombran entrenador oficial del salón.','🔥'],
+['Ruina con estilo','Sin un euro, pero con las cartas, los gatos y el mejor setup.','💸'],
+['Sofá eterno','Decides que el mundo exterior es opcional. Directo infinito.','🎮'],
+['Siesta legendaria','Cierras los ojos en la meta, duermes 14 horas y despiertas campeón.','😴'],
+['Campeón de domingo','Ganas el Gran Premio… de Mario Kart. Los gatos aplauden con la cola.','🏁']];
+let seen=new Set();try{seen=new Set(JSON.parse(localStorage.getItem('mvj')||'[]'))}catch(e){}
+let S,decks,pos=0,busy=false,mv=null;
+const st=()=>pos<=10?0:pos<=20?1:2;
+
+/* 3D */
+const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x2b2358);sc.fog=new THREE.Fog(0x2b2358,24,64);
+const cam=new THREE.PerspectiveCamera(50,1,.1,100);cam.position.set(0,8,10);
+sc.add(new THREE.HemisphereLight(0xfff0e0,0x5a4aa8,1.1));
+const dl=new THREE.DirectionalLight(0xffc89a,.9);dl.position.set(6,12,8);sc.add(dl);
+function rs(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
+addEventListener('resize',rs);rs();
+const M=c=>new THREE.MeshLambertMaterial({color:c});
+const bx=(w,h,d,c,x,y,z,p)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c));m.position.set(x,y,z);p.add(m);return m};
+const sp=(r,c,x,y,z,p,sx=1,sy=1,sz=1)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),M(c));m.position.set(x,y,z);m.scale.set(sx,sy,sz);p.add(m);return m};
+const P=i=>new THREE.Vector3(Math.sin(i*.6)*5,.15,-i*3);
+const fl=new THREE.Mesh(new THREE.PlaneGeometry(90,150),M(0x3a2f75));fl.rotation.x=-Math.PI/2;fl.position.set(0,-.2,-45);sc.add(fl);
+const TC=[0xff8a3d,0x2fd6c4,0xff5d8f,0xffd23f];
+for(let i=0;i<=T;i++){const t=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.25,.3,20),M(i==0?0x9be564:i==T?0xffffff:TC[i%4]));t.position.copy(P(i));t.position.y=0;sc.add(t)}
+const fe=P(T);bx(.12,3,.12,0xdddddd,fe.x,1.6,fe.z,sc);bx(1.2,.8,.06,0xff3b3b,fe.x+.6,2.8,fe.z,sc);
+for(let k=0;k<28;k++){const q=P(k*1.1+Math.random()),s=k%2?1:-1,x=q.x+s*(4+Math.random()*8),z=q.z+Math.random()*2;
+const g=new THREE.Group();g.position.set(x,0,z);bx(.3,1,.3,0x6b4a3a,0,.5,0,g);const c=new THREE.Mesh(new THREE.ConeGeometry(1,2.4,7),M(k%3?0x2fb58a:0x5fd36e));c.position.y=2;g.add(c);sc.add(g)}
+/* Javi */
+const pw=new THREE.Group();
+bx(.28,.5,.3,0x3a5a8c,-.17,.45,0,pw);bx(.28,.5,.3,0x3a5a8c,.17,.45,0,pw);
+bx(.78,.7,.42,0xf2efe6,0,1.15,0,pw);
+bx(.2,.4,.22,0xe0ac86,-.5,1.2,0,pw);bx(.2,.4,.22,0xe0ac86,.5,1.2,0,pw);
+bx(.13,.16,.02,0x2b2b3a,.5,1.12,.12,pw);
+sp(.4,0xe0ac86,0,1.85,0,pw);
+sp(.43,0x1b1511,0,1.98,-.05,pw,1,.8,1);
+bx(.3,.16,.22,0x1b1511,0,2.3,.12,pw);
+sp(.34,0x2a201a,0,1.68,.14,pw,1,.55,.9);
+bx(.3,.06,.06,0x2a201a,0,1.78,.43,pw);
+bx(.62,.12,.06,0x111118,0,1.92,.39,pw);bx(.24,.16,.06,0x111118,-.15,1.92,.41,pw);bx(.24,.16,.06,0x111118,.15,1.92,.41,pw);
+pw.scale.setScalar(1.1);pw.position.copy(P(0));sc.add(pw);
+/* gato */
+const cat=new THREE.Group();sp(.35,0xff9a3c,0,.35,0,cat,1.3,.9,1);sp(.25,0xff9a3c,0,.7,.35,cat);
+[-.13,.13].forEach(x=>{const e=new THREE.Mesh(new THREE.ConeGeometry(.09,.2,4),M(0xff9a3c));e.position.set(x,.95,.35);cat.add(e)});
+bx(.1,.1,.6,0xff9a3c,0,.5,-.55,cat);cat.position.set(1.6,.15,.9);sc.add(cat);
+const clock=new THREE.Clock(),look=new THREE.Vector3(0,.5,-4);
+function tick(){requestAnimationFrame(tick);const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
+if(mv){mv.t+=dt*3.2;const k=Math.min(mv.t,1);pw.position.lerpVectors(mv.a,mv.b,k);pw.position.y+=Math.sin(k*Math.PI)*.9;if(k>=1){const c=mv.cb;mv=null;c()}}
+else pw.rotation.y=Math.sin(t*1.6)*.12;
+const p=pw.position;cam.position.lerp(new THREE.Vector3(p.x*.7,8,p.z+10),.06);look.lerp(new THREE.Vector3(p.x,.5,p.z-4),.08);cam.lookAt(look);
+cat.position.lerp(new THREE.Vector3(p.x+1.6,.15,p.z+.9),.05);cat.rotation.y=Math.sin(t*2)*.3;
+R.render(sc,cam)}
+tick();
+const hop=(a,b,cb)=>{mv={a:P(a),b:P(b),t:0,cb}};
+
+/* juego */
+function hud(){const v=Math.max(0,S.v);$('#hud').innerHTML=`<span class=chip>Casilla ${pos}/${T}</span><span class=chip>${LV[st()]}</span><span class=chip>💶 ${S.d}</span><span class=chip>😄 ${S.a}/100</span><span class=chip>⚡ ${S.e}/100</span><span class=chip>🃏 ${S.c}</span><span class=chip>${'❤️'.repeat(v)}${'🖤'.repeat(5-v)}</span>`}
+function card(h){$('#ov').innerHTML='<div class="card">'+h+'</div>';$('#ov').hidden=false}
+function close(){$('#ov').hidden=true;busy=false;$('#roll').disabled=false}
+function home(){card(`<h1>Las Mil Vidas de Javi</h1><p class=sub>Un Javi. Diez destinos posibles.</p><p>Tira el dado y elige entre cartas, motos, streamers y cinco gatos exigentes. ¿En qué universo acabará esta vez?</p><button class="btn" id=pl>Jugar</button><button class="btn sec" id=un>Mis universos (${seen.size}/10)</button>`);$('#pl').onclick=start;$('#un').onclick=uni}
+function uni(){card(`<h2>Mis universos (${seen.size}/10)</h2>`+E.map((e,i)=>seen.has(i)?`<div class=u><i>${e[2]}</i><div><b>${e[0]}</b><span>${e[1]}</span></div></div>`:`<div class=u><i>🔒</i><div><b>???</b><span>Aún no descubierto.</span></div></div>`).join('')+`<button class="btn" id=bk>Volver</button>`);$('#bk').onclick=home}
+function start(){S={d:500,a:60,e:60,c:0,v:5};pos=0;mv=null;decks=EV.map(g=>g.slice().sort(()=>Math.random()-.5));pw.position.copy(P(0));cat.position.set(1.6,.15,.9);$('#dice').textContent='';hud();$('#hud').hidden=false;$('#dock').hidden=false;close()}
+$('#roll').onclick=()=>{if(busy)return;busy=true;$('#roll').disabled=true;let n=0;const iv=setInterval(()=>{$('#dice').textContent=1+Math.floor(Math.random()*6);if(++n>9){clearInterval(iv);const r=1+Math.floor(Math.random()*6);$('#dice').textContent=r;setTimeout(()=>go(r),300)}},70)};
+function go(r){if(r<=0||pos>=T)return land();hop(pos,pos+1,()=>{pos++;hud();go(r-1)})}
+function land(){if(pos>=T)return fin();const ev=decks[st()].pop();
+if(!ev){S.a=Math.min(100,S.a+5);hud();card(`<h2>Casilla tranquila</h2><p>Un respiro entre eventos.</p><div class=fx><span>+5 Ánimo</span></div><button class="btn" id=ok>Seguir</button>`);$('#ok').onclick=close;return}
+card(`<h2>${ev[0]}</h2><p class=lv>${LV[st()]}, casilla ${pos}</p><p>${ev[1]}</p>`+ev[2].map((o,i)=>`<button class=opt data-i="${i}"><b>${'ABC'[i]}. ${o[0]}</b><span>${o[1]}</span></button>`).join(''));
+document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>pick(ev[2][+b.dataset.i]))}
+function pick(o){let f=o[2];if(Array.isArray(f))f=f[Math.random()<.5?0:1];const out=[];
+for(const k in f){S[k]+=f[k];out.push(`<span>${f[k]>0?'+':''}${f[k]} ${L[k]}</span>`)}
+S.a=Math.min(100,S.a);S.e=Math.min(100,S.e);S.d=Math.max(0,S.d);S.c=Math.max(0,S.c);S.v=Math.min(5,S.v);
+let note='';if(S.a<=0||S.e<=0){S.v--;if(S.a<=0)S.a=40;if(S.e<=0)S.e=40;note='<p class=warn>¡Colapso! Pierdes 1 vida y recuperas fuerzas.</p>'}
+hud();card(`<h2>${o[0]}</h2><p>${o[1]}</p><div class=fx>${out.join('')}</div>${note}<button class="btn" id=ok>Seguir</button>`);
+$('#ok').onclick=()=>S.v<=0?fin():close()}
+function pickEnd(){if(S.v<=0)return 0;if(S.c>=7)return 1;if(S.d>=1200)return 2;if(S.a>=85)return 3;if(S.e>=85)return 4;if(S.c>=4)return 5;if(S.d<=100)return 6;if(S.a<=25)return 7;if(S.e<=25)return 8;return 9}
+function fin(){const i=pickEnd(),e=E[i];seen.add(i);try{localStorage.setItem('mvj',JSON.stringify([...seen]))}catch(x){}
+$('#hud').hidden=true;$('#dock').hidden=true;
+card(`<div class=em>${e[2]}</div><h2>${e[0]}</h2><p>${e[1]}</p><p class=lv>Final ${i+1} de 10. Universos descubiertos: ${seen.size}/10.</p><button class="btn" id=ag>Jugar otra vez</button><button class="btn sec" id=un>Mis universos</button>`);
+$('#ag').onclick=start;$('#un').onclick=uni}
+S={d:500,a:60,e:60,c:0,v:5};home();
+</script></body></html>
