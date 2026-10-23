@@ -42,9 +42,9 @@ h2{font-size:26px;line-height:1.1;font-weight:800;margin-bottom:6px}
 <div class="ov" id="ov" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const $=s=>document.querySelector(s),T=30;
+const $=s=>document.querySelector(s),T=20;
 const L={d:'€',a:'Ánimo',e:'Energía',c:'Cartas',v:'Vidas'};
-const LV=['Nivel 1: modo tutorial','Nivel 2: modo difícil','Nivel 3: jefe final'];
+const LV=['Nivel 1: libres','Nivel 2: carrera','Nivel 3: última vuelta'];
 const EV=[[
 ['Sobres Pokémon','La tienda ha recibido sobres nuevos y huele a carta brillante.',[['Comprar 3 sobres','Caro, pero ilusión máxima.',{d:-60,c:2,a:5}],['Comprar solo 1','Prudente y con suerte.',{d:-20,c:1}],['Ahorrar','El bolsillo respira.',{d:30,a:-5}]]],
 ['Directo a las 3 am','Tu streamer favorito empieza directo de madrugada.',[['Verlo entero','Mañana serás un zombi feliz.',{e:-25,a:15}],['Dormir','El directo queda en diferido.',{e:20,a:-5}],['Verlo con un Monster','Energía prestada.',{e:-10,a:10,d:-3}]]],
@@ -77,49 +77,81 @@ const E=[
 ['Campeón de domingo','Ganas el Gran Premio… de Mario Kart. Los gatos aplauden con la cola.','🏁']];
 let seen=new Set();try{seen=new Set(JSON.parse(localStorage.getItem('mvj')||'[]'))}catch(e){}
 let S,decks,pos=0,busy=false,mv=null;
-const st=()=>pos<=10?0:pos<=20?1:2;
+const st=()=>pos<=7?0:pos<=14?1:2;
 
 /* 3D */
 const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));
-const sc=new THREE.Scene();sc.background=new THREE.Color(0x2b2358);sc.fog=new THREE.Fog(0x2b2358,24,64);
-const cam=new THREE.PerspectiveCamera(50,1,.1,100);cam.position.set(0,8,10);
-sc.add(new THREE.HemisphereLight(0xfff0e0,0x5a4aa8,1.1));
-const dl=new THREE.DirectionalLight(0xffc89a,.9);dl.position.set(6,12,8);sc.add(dl);
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x9fd8ff);sc.fog=new THREE.Fog(0xbfe6ff,30,95);
+const cam=new THREE.PerspectiveCamera(50,1,.1,140);cam.position.set(0,7,9);
+sc.add(new THREE.HemisphereLight(0xffffff,0x6aa56a,1.05));
+const dl=new THREE.DirectionalLight(0xfff1d6,1);dl.position.set(8,14,6);sc.add(dl);
 function rs(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
 addEventListener('resize',rs);rs();
-const M=c=>new THREE.MeshLambertMaterial({color:c});
+const mc={},M=c=>mc[c]||(mc[c]=new THREE.MeshLambertMaterial({color:c})),BM=c=>new THREE.MeshBasicMaterial({color:c});
 const bx=(w,h,d,c,x,y,z,p)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c));m.position.set(x,y,z);p.add(m);return m};
 const sp=(r,c,x,y,z,p,sx=1,sy=1,sz=1)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),M(c));m.position.set(x,y,z);m.scale.set(sx,sy,sz);p.add(m);return m};
-const P=i=>new THREE.Vector3(Math.sin(i*.6)*5,.15,-i*3);
-const fl=new THREE.Mesh(new THREE.PlaneGeometry(90,150),M(0x3a2f75));fl.rotation.x=-Math.PI/2;fl.position.set(0,-.2,-45);sc.add(fl);
+const cy=(r,h,c,x,y,z,p,rz)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,14),M(c));m.rotation.z=rz||0;m.position.set(x,y,z);p.add(m);return m};
+const D=3.4,END=-T*D,P=i=>new THREE.Vector3(0,.15,-i*D);
+const Z0=8,Z1=END-30,LL=Z0-Z1,ZC=(Z0+Z1)/2;
+/* circuito */
+const gr=new THREE.Mesh(new THREE.PlaneGeometry(240,LL+80),M(0x3f9b55));gr.rotation.x=-Math.PI/2;gr.position.set(0,-.03,ZC);sc.add(gr);
+bx(9,.1,LL,0x3b3b48,0,0,ZC,sc);
+for(let z=Z0;z>Z1;z-=1.2){const c=Math.round(z/1.2)%2?0xe23b3b:0xffffff;bx(.6,.12,1.2,c,-4.8,.02,z,sc);bx(.6,.12,1.2,c,4.8,.02,z,sc)}
+[-6.1,6.1].forEach(x=>{bx(.5,1,LL,0xdfe8f0,x,.5,ZC,sc);bx(.52,.2,LL,0x2f6fe0,x,.75,ZC,sc)});
 const TC=[0xff8a3d,0x2fd6c4,0xff5d8f,0xffd23f];
-for(let i=0;i<=T;i++){const t=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.25,.3,20),M(i==0?0x9be564:i==T?0xffffff:TC[i%4]));t.position.copy(P(i));t.position.y=0;sc.add(t)}
-const fe=P(T);bx(.12,3,.12,0xdddddd,fe.x,1.6,fe.z,sc);bx(1.2,.8,.06,0xff3b3b,fe.x+.6,2.8,fe.z,sc);
-for(let k=0;k<28;k++){const q=P(k*1.1+Math.random()),s=k%2?1:-1,x=q.x+s*(4+Math.random()*8),z=q.z+Math.random()*2;
-const g=new THREE.Group();g.position.set(x,0,z);bx(.3,1,.3,0x6b4a3a,0,.5,0,g);const c=new THREE.Mesh(new THREE.ConeGeometry(1,2.4,7),M(k%3?0x2fb58a:0x5fd36e));c.position.y=2;g.add(c);sc.add(g)}
+for(let i=0;i<T;i++)bx(2.8,.14,2.8,i==0?0x9be564:TC[i%4],0,.07,-i*D,sc);
+/* semáforos de salida */
+bx(.4,5,.4,0x30303c,-5.2,2.5,2.4,sc);bx(.4,5,.4,0x30303c,5.2,2.5,2.4,sc);bx(10.8,.8,.5,0x30303c,0,5,2.4,sc);
+for(let k=-2;k<=2;k++){const l=new THREE.Mesh(new THREE.SphereGeometry(.24,12,10),BM(0xff2a2a));l.position.set(k*.9,5,2.7);sc.add(l)}
+/* meta a cuadros */
+const k2=document.createElement('canvas');k2.width=256;k2.height=64;const g2=k2.getContext('2d');
+for(let x=0;x<16;x++)for(let y=0;y<4;y++){g2.fillStyle=(x+y)%2?'#111':'#fff';g2.fillRect(x*16,y*16,16,16)}
+const ck=new THREE.CanvasTexture(k2);
+const fl=new THREE.Mesh(new THREE.PlaneGeometry(9,1.6),new THREE.MeshBasicMaterial({map:ck}));fl.rotation.x=-Math.PI/2;fl.position.set(0,.17,END);sc.add(fl);
+bx(.4,6,.4,0xdddddd,-5,3,END,sc);bx(.4,6,.4,0xdddddd,5,3,END,sc);
+const ab=new THREE.Mesh(new THREE.BoxGeometry(10.4,1.2,.4),new THREE.MeshBasicMaterial({map:ck}));ab.position.set(0,6,END);sc.add(ab);
+bx(1.6,.9,1.6,0xffd23f,0,.45,END-9,sc);bx(1.6,.6,1.6,0xc0c8d0,-1.8,.3,END-9,sc);bx(1.6,.4,1.6,0xcd7f32,1.8,.2,END-9,sc);
+/* gradas con público */
+const CR=[0xe23b3b,0x2f6fe0,0xffd23f,0xffffff,0x2fd6c4,0xff8a3d];
+function stand(z){for(let k=0;k<4;k++){const x=9.5+k*1.5;bx(1.5,.9*(k+1),12,0x8a8fa3,x,.45*(k+1),z,sc);for(let j=0;j<13;j++)bx(.45,.6,.5,CR[Math.floor(Math.random()*6)],x,.9*(k+1)+.3,z-5.5+j*.85,sc)}}
+for(let k=0;k<5;k++)stand(-6-k*14);
+/* boxes y monoplazas */
+function car(c,x,z){const g=new THREE.Group();
+bx(.8,.4,2.6,c,0,.5,0,g);bx(.4,.25,1.4,c,0,.42,-1.9,g);bx(1.9,.07,.45,0x1a1a22,0,.2,-2.55,g);
+bx(1.3,.07,.55,0x1a1a22,0,1,1.45,g);bx(.07,.5,.1,0x1a1a22,0,.75,1.45,g);sp(.24,0xffd23f,0,.82,.1,g);
+[-1,1].forEach(s=>{cy(.4,.45,0x15151a,s*.95,.4,-1.4,g,Math.PI/2);cy(.45,.55,0x15151a,s*.95,.45,1.2,g,Math.PI/2)});
+g.position.set(x,0,z);sc.add(g)}
+bx(4,.08,34,0x55555f,-9,0,-18,sc);
+[0xe23b3b,0x2f6fe0,0x2fd6c4,0xff8a3d].forEach((c,i)=>{const z=-6-i*8;car(c,-9,z);bx(3.4,2.6,3.6,0xcfd6e0,-13.5,1.3,z,sc);bx(3.6,.3,3.8,c,-13.5,2.75,z,sc);bx(.1,1.8,2.4,0x2a2a35,-11.78,.9,z,sc)});
+/* árboles y montañas */
+for(let k=0;k<26;k++){const s=k%2?1:-1,g=new THREE.Group();g.position.set(s*(20+Math.random()*20),0,-Math.random()*(T*D+30));bx(.4,1.2,.4,0x6b4a3a,0,.6,0,g);const c=new THREE.Mesh(new THREE.ConeGeometry(1.3,3,7),M(k%3?0x2f9a5a:0x5fd36e));c.position.y=2.6;g.add(c);sc.add(g)}
+[[-60,-20],[60,-45],[-65,-90],[62,-100]].forEach(a=>{const m=new THREE.Mesh(new THREE.ConeGeometry(20,24,6),M(0x7fb7a4));m.position.set(a[0],12,a[1]);sc.add(m)});
 /* Javi */
-const pw=new THREE.Group();
-bx(.28,.5,.3,0x3a5a8c,-.17,.45,0,pw);bx(.28,.5,.3,0x3a5a8c,.17,.45,0,pw);
-bx(.78,.7,.42,0xf2efe6,0,1.15,0,pw);
-bx(.2,.4,.22,0xe0ac86,-.5,1.2,0,pw);bx(.2,.4,.22,0xe0ac86,.5,1.2,0,pw);
-bx(.13,.16,.02,0x2b2b3a,.5,1.12,.12,pw);
-sp(.4,0xe0ac86,0,1.85,0,pw);
-sp(.43,0x1b1511,0,1.98,-.05,pw,1,.8,1);
-bx(.3,.16,.22,0x1b1511,0,2.3,.12,pw);
-sp(.34,0x2a201a,0,1.68,.14,pw,1,.55,.9);
-bx(.3,.06,.06,0x2a201a,0,1.78,.43,pw);
-bx(.62,.12,.06,0x111118,0,1.92,.39,pw);bx(.24,.16,.06,0x111118,-.15,1.92,.41,pw);bx(.24,.16,.06,0x111118,.15,1.92,.41,pw);
+const pw=new THREE.Group(),SK=0xe0ac86,DK=0x1b1511,WH=0xf4f1ea,JN=0x3b5b92;
+[-.17,.17].forEach(s=>{bx(.3,.16,.46,0xffffff,s,.08,.07,pw);bx(.28,.56,.3,JN,s,.44,0,pw)});
+bx(.8,.08,.34,0x222228,0,.75,0,pw);bx(.8,.72,.44,WH,0,1.1,0,pw);cy(.12,.14,SK,0,1.52,0,pw,0);
+[-1,1].forEach(s=>{bx(.24,.3,.27,WH,s*.53,1.3,0,pw);bx(.2,.36,.22,SK,s*.55,1,0,pw);sp(.1,SK,s*.55,.78,0,pw)});
+bx(.03,.2,.12,0x35354a,.66,1,.02,pw);bx(.1,.18,.02,0x35354a,.55,1.02,.12,pw);
+const can=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.28,12),M(0x5fe05a));can.position.set(.58,.84,.15);pw.add(can);
+cy(.083,.08,0x111118,.58,.92,.15,pw,0);
+const nk=new THREE.Mesh(new THREE.TorusGeometry(.2,.015,6,16),M(0x222228));nk.rotation.x=Math.PI/2;nk.position.set(0,1.48,.03);pw.add(nk);
+sp(.4,SK,0,1.95,0,pw);sp(.08,SK,-.4,1.93,0,pw,.6,1,1);sp(.08,SK,.4,1.93,0,pw,.6,1,1);bx(.08,.12,.1,0xd49a74,0,1.9,.41,pw);
+sp(.43,DK,0,2,-.06,pw,1,.82,1.02);bx(.46,.14,.34,DK,0,2.34,.1,pw);bx(.36,.12,.3,DK,0,2.45,.2,pw);
+bx(.64,.07,.06,0x0e0e14,0,1.99,.4,pw);bx(.26,.17,.07,0x0e0e14,-.15,1.98,.41,pw);bx(.26,.17,.07,0x0e0e14,.15,1.98,.41,pw);
+bx(.07,.03,.01,0x8fb8ff,-.2,2.03,.452,pw);bx(.07,.03,.01,0x8fb8ff,.1,2.03,.452,pw);
+sp(.35,0x2a201a,0,1.8,.11,pw,1,.62,.95);bx(.34,.07,.07,0x2a201a,0,1.86,.45,pw);bx(.15,.025,.02,0xd99a86,0,1.79,.46,pw);
 pw.scale.setScalar(1.1);pw.position.copy(P(0));sc.add(pw);
 /* gato */
-const cat=new THREE.Group();sp(.35,0xff9a3c,0,.35,0,cat,1.3,.9,1);sp(.25,0xff9a3c,0,.7,.35,cat);
-[-.13,.13].forEach(x=>{const e=new THREE.Mesh(new THREE.ConeGeometry(.09,.2,4),M(0xff9a3c));e.position.set(x,.95,.35);cat.add(e)});
-bx(.1,.1,.6,0xff9a3c,0,.5,-.55,cat);cat.position.set(1.6,.15,.9);sc.add(cat);
-const clock=new THREE.Clock(),look=new THREE.Vector3(0,.5,-4);
+const cat=new THREE.Group(),OR=0xff9a3c;
+sp(.35,OR,0,.38,0,cat,1.3,.9,1);sp(.26,OR,0,.72,.36,cat);bx(.5,.04,.14,0xe07a1e,0,.64,0,cat);bx(.1,.1,.6,OR,0,.52,-.58,cat);
+[-.14,.14].forEach(x=>{const e=new THREE.Mesh(new THREE.ConeGeometry(.09,.2,4),M(OR));e.position.set(x,.98,.36);cat.add(e);sp(.035,0x111118,x*.8,.76,.58,cat)});
+sp(.04,0xff8fa0,0,.7,.61,cat);cat.position.set(1.7,.15,.9);sc.add(cat);
+const clock=new THREE.Clock(),look=new THREE.Vector3(0,1,-5);
 function tick(){requestAnimationFrame(tick);const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
-if(mv){mv.t+=dt*3.2;const k=Math.min(mv.t,1);pw.position.lerpVectors(mv.a,mv.b,k);pw.position.y+=Math.sin(k*Math.PI)*.9;if(k>=1){const c=mv.cb;mv=null;c()}}
+if(mv){mv.t+=dt*3.4;const k=Math.min(mv.t,1);pw.position.lerpVectors(mv.a,mv.b,k);pw.position.y+=Math.sin(k*Math.PI)*.9;if(k>=1){const c=mv.cb;mv=null;c()}}
 else pw.rotation.y=Math.sin(t*1.6)*.12;
-const p=pw.position;cam.position.lerp(new THREE.Vector3(p.x*.7,8,p.z+10),.06);look.lerp(new THREE.Vector3(p.x,.5,p.z-4),.08);cam.lookAt(look);
-cat.position.lerp(new THREE.Vector3(p.x+1.6,.15,p.z+.9),.05);cat.rotation.y=Math.sin(t*2)*.3;
+const p=pw.position;cam.position.lerp(new THREE.Vector3(p.x*.5,6.5,p.z+9),.06);look.lerp(new THREE.Vector3(p.x,1,p.z-5),.08);cam.lookAt(look);
+cat.position.lerp(new THREE.Vector3(p.x+1.7,.15,p.z+.9),.05);cat.rotation.y=Math.sin(t*2)*.3;
 R.render(sc,cam)}
 tick();
 const hop=(a,b,cb)=>{mv={a:P(a),b:P(b),t:0,cb}};
