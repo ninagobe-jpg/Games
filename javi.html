@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Las Mil Vidas de Javi</title>
+<title>Javi GP</title>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#2b2358;--card:#1d1b3a;--ink:#fff4e0;--mut:#b9b2e0;--or:#ff8a3d;--tl:#2fd6c4;--pk:#ff5d8f;--line:#4b4590;color-scheme:dark}
@@ -12,7 +12,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font
 .hud{position:fixed;top:0;left:0;right:0;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 8px) 8px 8px;background:rgba(29,27,58,.9);backdrop-filter:blur(8px)}
 .chip{background:#2b2766;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-weight:700;font-size:14px;white-space:nowrap}
 .dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);display:flex;flex-direction:column;align-items:center;gap:6px}
-#dice{font-size:54px;font-weight:800;height:64px;line-height:64px;color:var(--or);text-shadow:0 3px 0 #1d1b3a}
+#dw{perspective:500px;height:86px;width:86px;margin-bottom:6px}
+#dice{width:64px;height:64px;margin:11px;position:relative;transform-style:preserve-3d;transform:rotateX(-28deg) rotateY(38deg)}
+#dice.go{transition:transform 1.2s cubic-bezier(.15,.7,.2,1)}
+#dw.hp{animation:hp 1.2s ease-out}
+@keyframes hp{0%{transform:translateY(0)}30%{transform:translateY(-70px)}60%{transform:translateY(0)}75%{transform:translateY(-14px)}100%{transform:translateY(0)}}
+.fc{position:absolute;inset:0;background:#fff4e0;border:2px solid #1d1b3a;border-radius:10px;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:8px;box-shadow:inset 0 0 8px rgba(0,0,0,.18)}
+.fc i{border-radius:50%;background:#1d1b3a;width:11px;height:11px;margin:auto}
+.fc[data-n="1"] i{background:#e23b3b;width:15px;height:15px}
+.f1{transform:translateZ(32px)}.f6{transform:rotateY(180deg) translateZ(32px)}.f2{transform:rotateY(90deg) translateZ(32px)}.f5{transform:rotateY(-90deg) translateZ(32px)}.f3{transform:rotateX(90deg) translateZ(32px)}.f4{transform:rotateX(-90deg) translateZ(32px)}
+.cin{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between}
+.bar{width:100%;height:11vh;background:#000}
+#itx{position:fixed;left:0;right:0;top:34%;text-align:center;padding:0 20px;font-size:clamp(26px,6vw,56px);font-weight:800;line-height:1.1;color:var(--ink);text-shadow:0 3px 14px #000;opacity:0;transition:opacity .8s}
+#itx.on{opacity:1}
+#itx b{display:block;color:var(--or);font-size:1.25em}
+#skip{pointer-events:auto;position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 13vh);width:auto;padding:6px 14px;font-size:14px;margin:0}
 .btn{display:block;width:100%;border:0;border-radius:14px;padding:12px 18px;margin-top:10px;background:var(--or);color:#1d1b3a;font:800 18px "Baloo 2",system-ui,sans-serif;cursor:pointer}
 .btn.sec{background:#2b2766;color:var(--ink);border:1px solid var(--line)}
 .btn:disabled{opacity:.5;cursor:default}
@@ -38,45 +52,51 @@ h2{font-size:26px;line-height:1.1;font-weight:800;margin-bottom:6px}
 </style></head><body>
 <canvas id="c"></canvas>
 <div class="hud" id="hud" hidden></div>
-<div class="dock" id="dock" hidden><div id="dice"></div><button class="btn" id="roll">Tirar dado</button></div>
+<div class="dock" id="dock" hidden><div id="dw"><div id="dice"></div></div><button class="btn" id="roll">Tirar dado</button></div>
 <div class="ov" id="ov" hidden></div>
+<div class="cin" id="cin" hidden><div class="bar"></div><div id="itx"></div><button class="btn sec" id="skip">Saltar intro</button><div class="bar"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const $=s=>document.querySelector(s),T=20;
-const L={d:'€',a:'Ánimo',e:'Energía',c:'Cartas',v:'Vidas'};
+const L={d:'€',a:'Ánimo',e:'Energía',c:'Cartas',v:'Vidas',m:'Maxibons'};
 const LV=['Nivel 1: libres','Nivel 2: carrera','Nivel 3: última vuelta'];
 const EV=[[
 ['Sobres Pokémon','La tienda ha recibido sobres nuevos y huele a carta brillante.',[['Comprar 3 sobres','Caro, pero ilusión máxima.',{d:-60,c:2,a:5}],['Comprar solo 1','Prudente y con suerte.',{d:-20,c:1}],['Ahorrar','El bolsillo respira.',{d:30,a:-5}]]],
 ['Directo a las 3 am','Tu streamer favorito empieza directo de madrugada.',[['Verlo entero','Mañana serás un zombi feliz.',{e:-25,a:15}],['Dormir','El directo queda en diferido.',{e:20,a:-5}],['Verlo con un Monster','Energía prestada.',{e:-10,a:10,d:-3}]]],
-['Cinco gatos, cero paciencia','A las 7 am los 5 gatos te rodean exigiendo desayuno.',[['Pienso premium','Maullidos de gratitud.',{d:-40,a:15}],['Pienso normal','Aceptable para el tribunal felino.',{d:-15,a:5}],['Hacerse el dormido','Los gatos no se lo creen.',{a:-15,e:-5}]]],
+['Nishi y Noya piden desayuno','A las 7 am las dos gatas te miran como si fueras su empleado.',[['Pienso premium','Ronroneos de aprobación.',{d:-40,a:15}],['Pienso normal','Aceptable para el tribunal felino.',{d:-15,a:5}],['Hacerse el dormido','Nishi no se lo cree.',{a:-15,e:-5}]]],
 ['Gran Premio en casa','Hoy hay carrera de F1 y el sofá te llama.',[['Verla con snacks','Gloria dominical.',{d:-20,a:15,e:-5}],['Apostar con colegas','Todo o nada.',[{d:120,a:10},{d:-80,a:-10}]],['Ver solo el final','Eficiencia pura.',{a:5,e:5}]]],
-['Rebajas de videojuegos','Tu lista de deseados está en oferta.',[['Comprar el juego nuevo','Diversión asegurada.',{d:-70,a:20,e:-10}],['Esperar otra oferta','Paciencia gamer.',{a:-5}],['Vender uno viejo','Dinero rápido.',{d:60,a:-5}]]]
+['Mini Maxibon','Abres el congelador y queda una última caja de mini Maxibons.',[['Comerte tres de golpe','Felicidad helada.',{m:3,a:15,e:-5}],['Guardarla para después','Autocontrol de piloto.',{m:1,a:5}],['Compartir con Nina','Puntos de pareja ejemplar.',{m:1,a:20}]]],
+['Noche de Harry Potter','Nina propone otra maratón de Harry Potter en el sofá.',[['Maratón completa','Hasta la Cámara de los Secretos.',{a:20,e:-20}],['Una película y a dormir','Hogwarts con horario.',{a:10,e:5}],['Con Nishi y Noya encima','Imposible levantarse.',{a:20,e:-5}]]]
 ],[
 ['MotoGP en directo','Salen entradas para ver el Gran Premio en el circuito.',[['Comprar y viajar','Experiencia inolvidable.',{d:-200,a:30,e:-20}],['Verlo en un bar','Con tapas y ruido de motores.',{d:-30,a:10}],['Dejarlo pasar','Mañana te arrepentirás.',{a:-10}]]],
 ['Boss imposible','Llevas 3 horas atascado en el mismo jefe final.',[['Insistir hasta ganar','Victoria o ataque de nervios.',[{a:25,e:-30},{a:-25,e:-30}]],['Buscar una guía','Cero orgullo, cero sufrimiento.',{a:10,e:-5}],['Apagar la consola','Tregua digna.',{a:-10,e:10}]]],
-['Gato en el teclado','Un gato pisa el botón y borra tu partida.',[['Perdonarlo','Cara de inocente, culpa cero.',{a:10}],['Regañarlo','Te ignora con elegancia.',{a:-5,e:-5}],['Empezar de nuevo','Ahora con el gato en las rodillas.',{a:15,e:-15}]]],
-['Carta rara en Wallapop','Una carta de tus sueños a un precio sospechoso.',[['Comprar sin dudar','Puede ser un tesoro o una estafa.',[{d:-150,c:3},{d:-150,a:-20}]],['Negociar el precio','El vendedor contesta a ratos.',{d:-80,c:1}],['Pasar','La FOMO te susurra.',{a:-5}]]],
-['Sin dormir','Llevas días de directos, carreras y cartas.',[['Monster doble','Alas y taquicardia.',{e:25,a:-10,d:-5}],['Siesta de 2 horas','El mejor fichaje del año.',{e:30,a:5}],['Seguir como si nada','Tu cuerpo tiene una opinión.',{e:-25,v:-1}]]]
+['Noya en el teclado','Noya pisa el botón y borra tu partida.',[['Perdonarla','Cara de inocente, culpa cero.',{a:10}],['Regañarla','Te ignora con elegancia.',{a:-5,e:-5}],['Empezar de nuevo','Ahora con Noya en las rodillas.',{a:15,e:-15}]]],
+['Llamada de ventas','Teletrabajo: un cliente difícil llama justo antes de comer.',[['Cerrar la venta','Tu labia es un superpoder.',[{d:200,a:10,e:-15},{d:20,a:-10,e:-15}]],['Pasar la llamada','Delegar también es un arte.',{a:-5,e:5}],['Responder en pijama','Profesionalidad desde la cintura.',{d:60,a:5}]]],
+['Ganxi propone plan','Tu mejor amigo Ganxi escribe: ¿Te vienes?',[['Ir sin pensarlo','Las mejores historias empiezan así.',{a:25,e:-20,d:-60}],['Plan en casa con videojuegos','Seguro y divertido.',{a:15,e:-5}],['Decir que otro día','Ganxi te mandará un meme.',{a:-10,e:5}]]],
+['Tu hermana mayor','Tu hermana mayor te llama para pedirte consejo y, de paso, contarte la vida.',[['Escucharla entera','Gran hermano, gran paciencia.',{a:15,e:-10}],['Dar el consejo exprés','Eficiente y cariñoso.',{a:5}],['Hacerte el ocupado','Ella lo sabe.',{a:-10}]]]
 ],[
 ['Torneo de cartas','El local organiza un torneo de cartas Pokémon.',[['Participar','Mazo en mano.',[{c:3,d:150},{c:-1,a:-15}]],['Mirar desde la grada','Aprender también cuenta.',{a:5}],['Cambiar cartas','Un trato justo, casi.',{c:1,d:-30}]]],
-['Casa más grande','Los gatos miran con desprecio el rascador viejo.',[['Torre de gatos','Un rascador de lujo.',{d:-200,a:25}],['Rascadores caseros','Cartón y esfuerzo.',{d:-30,a:10,e:-10}],['No hacer nada','Los gatos toman nota.',{a:-15}]]],
-['Canal de streaming','Te proponen abrir tu propio canal.',[['Empezar el canal','Fama, ojeras y suscriptores.',{d:200,e:-30,a:10}],['Probar un día','Ensayo general.',{d:50,e:-10}],['Seguir de espectador','Primera fila, sin presión.',{a:10}]]],
-['Mario Kart a lo F1','Final de campeonato en el salón, con caparazones azules.',[['Ir a por la victoria','Pole position o cabezazo.',[{a:25,d:100},{a:-15,e:-10}]],['Jugar relajado','Sin caparazones, sin rencor.',{a:10}],['Jugar con los gatos mirando','Público exigente.',{a:15,e:-5}]]],
-['Recta final','La meta está a pocas casillas.',[['Todo o nada','Mucho en juego.',[{d:300,a:20},{d:-300,e:-30}]],['Ir tranquilo','Sin prisa, con estilo.',{a:10,e:10}],['Brindar con un Monster','Como en el podio.',{e:25,a:10,d:-5}]]]
+['Mario Kart con Xavi','Xavi te reta a una carrera final, con caparazones azules incluidos.',[['Ir a por la victoria','Pole position o cabezazo.',[{a:25,d:100},{a:-15,e:-10}]],['Jugar relajado','Sin caparazones, sin rencor.',{a:10}],['Jugar con las gatas mirando','Público exigente.',{a:15,e:-5}]]],
+['Comida en casa de mamá','Tu madre ha cocinado para ti y para cuatro más.',[['Repetir plato','Amor en forma de comida.',{a:25,e:-10}],['Ayudar a recoger','Hijo del año.',{a:15,e:-5}],['Llevarte tápers','El tesoro de la semana.',{d:30,a:10}]]],
+['Tu hermana pequeña','Tu hermana pequeña quiere que le enseñes a jugar a algo.',[['Enseñarle tus cartas Pokémon','Futura coleccionista.',{c:1,a:20}],['Jugar a videojuegos juntos','Dúo imbatible.',{a:20,e:-10}],['Sobornarla con un Maxibon','Un mini Maxibon cierra tratos.',{m:-1,a:15}]]],
+['Clara tiene plan','Tu amiga Clara llama con un plan: cena y cotilleos.',[['Ir a la cena','Risas aseguradas.',{a:25,d:-50,e:-10}],['Solo un café','Plan corto y dulce.',{a:10,d:-10}],['Mandarle un audio de 4 minutos','Un clásico.',{a:5}]]],
+['Billete a Japón','En diciembre os vais a Japón y toca planificar la ruta.',[['Itinerario perfecto','Hoja de cálculo y emoción.',{a:25,e:-15}],['Buscar cartas Pokémon allí','Misión prioritaria.',{c:2,d:-100,a:15}],['Improvisar sobre la marcha','Aventura pura.',{a:10,e:5}]]]
 ]];
 const E=[
-['Respawn en el sofá','Te quedas sin vidas, pero los 5 gatos te hacen sitio en el sofá. Partida guardada.','🛋️'],
-['Coleccionista PSA 10','Tu colección de cartas vale más que el coche. Los gatos la vigilan como dragones.','🃏'],
-['Rey de los gatos','Con tanto dinero compras una finca. Ahora tienes 5 gatos… y 45 más.','👑'],
-['Zen gatuno','Cartas, carreras y gatos ronroneando. Paz absoluta, nada puede salir mal.','🧘'],
+['Respawn en el sofá','Te quedas sin vidas, pero Nishi y Noya te hacen sitio en el sofá y Nina pone Harry Potter. Partida guardada.','🛋️'],
+['Coleccionista PSA 10','Tu colección de cartas vale más que el coche. Nishi y Noya la vigilan como dragones.','🃏'],
+['Rey de los Maxibons','El congelador es tu reino y los mini Maxibons, tu moneda oficial.','🍦'],
+['Reino de Nishi y Noya','Con tanto dinero compras una finca con rascadores gigantes. Ellas gobiernan; tú sirves la comida.','👑'],
+['Zen gatuno','Cartas, carreras y dos gatas ronroneando. Paz absoluta.','🧘'],
 ['Voltaje máximo','Tanta energía que sales disparado y llegas a la meta antes que el dado.','⚡'],
 ['Maestro Pokémon','Completas el álbum y te nombran entrenador oficial del salón.','🔥'],
-['Ruina con estilo','Sin un euro, pero con las cartas, los gatos y el mejor setup.','💸'],
-['Sofá eterno','Decides que el mundo exterior es opcional. Directo infinito.','🎮'],
+['Rumbo a Japón','Cruzas la meta y la pantalla anuncia: Japón, diciembre. Nina ya ha preparado las dos maletas.','✈️'],
+['Ruina con estilo','Sin un euro, pero con las cartas, las gatas y el mejor setup.','💸'],
+['Sofá eterno','Decides que el mundo exterior es opcional. Harry Potter y directo infinito.','🎮'],
 ['Siesta legendaria','Cierras los ojos en la meta, duermes 14 horas y despiertas campeón.','😴'],
-['Campeón de domingo','Ganas el Gran Premio… de Mario Kart. Los gatos aplauden con la cola.','🏁']];
+['Campeón de domingo','Ganas el Gran Premio… de Mario Kart. Nishi y Noya aplauden con la cola.','🏁']];
 let seen=new Set();try{seen=new Set(JSON.parse(localStorage.getItem('mvj')||'[]'))}catch(e){}
-let S,decks,pos=0,busy=false,mv=null;
+let S,decks,pos=0,busy=false,mv=null,intro=null,seenIntro=false,AC=null,rx=-28,ry=38;
 const st=()=>pos<=7?0:pos<=14?1:2;
 
 /* 3D */
@@ -102,7 +122,7 @@ const TC=[0xff8a3d,0x2fd6c4,0xff5d8f,0xffd23f];
 for(let i=0;i<T;i++)bx(2.8,.14,2.8,i==0?0x9be564:TC[i%4],0,.07,-i*D,sc);
 /* semáforos de salida */
 bx(.4,5,.4,0x30303c,-5.2,2.5,2.4,sc);bx(.4,5,.4,0x30303c,5.2,2.5,2.4,sc);bx(10.8,.8,.5,0x30303c,0,5,2.4,sc);
-for(let k=-2;k<=2;k++){const l=new THREE.Mesh(new THREE.SphereGeometry(.24,12,10),BM(0xff2a2a));l.position.set(k*.9,5,2.7);sc.add(l)}
+const LT=[];for(let k=-2;k<=2;k++){const l=new THREE.Mesh(new THREE.SphereGeometry(.24,12,10),BM(0x401010));l.position.set(k*.9,5,2.7);sc.add(l);LT.push(l)}
 /* meta a cuadros */
 const k2=document.createElement('canvas');k2.width=256;k2.height=64;const g2=k2.getContext('2d');
 for(let x=0;x<16;x++)for(let y=0;y<4;y++){g2.fillStyle=(x+y)%2?'#111':'#fff';g2.fillRect(x*16,y*16,16,16)}
@@ -140,30 +160,58 @@ sp(.43,DK,0,2,-.06,pw,1,.82,1.02);bx(.46,.14,.34,DK,0,2.34,.1,pw);bx(.36,.12,.3,
 bx(.64,.07,.06,0x0e0e14,0,1.99,.4,pw);bx(.26,.17,.07,0x0e0e14,-.15,1.98,.41,pw);bx(.26,.17,.07,0x0e0e14,.15,1.98,.41,pw);
 bx(.07,.03,.01,0x8fb8ff,-.2,2.03,.452,pw);bx(.07,.03,.01,0x8fb8ff,.1,2.03,.452,pw);
 sp(.35,0x2a201a,0,1.8,.11,pw,1,.62,.95);bx(.34,.07,.07,0x2a201a,0,1.86,.45,pw);bx(.15,.025,.02,0xd99a86,0,1.79,.46,pw);
-pw.scale.setScalar(1.1);pw.position.copy(P(0));sc.add(pw);
-/* gato */
-const cat=new THREE.Group(),OR=0xff9a3c;
-sp(.35,OR,0,.38,0,cat,1.3,.9,1);sp(.26,OR,0,.72,.36,cat);bx(.5,.04,.14,0xe07a1e,0,.64,0,cat);bx(.1,.1,.6,OR,0,.52,-.58,cat);
-[-.14,.14].forEach(x=>{const e=new THREE.Mesh(new THREE.ConeGeometry(.09,.2,4),M(OR));e.position.set(x,.98,.36);cat.add(e);sp(.035,0x111118,x*.8,.76,.58,cat)});
-sp(.04,0xff8fa0,0,.7,.61,cat);cat.position.set(1.7,.15,.9);sc.add(cat);
+pw.scale.setScalar(1.1);pw.position.copy(P(0));pw.rotation.y=Math.PI;sc.add(pw);
+/* gatas */
+function mkCat(C,D2){const g=new THREE.Group();
+sp(.35,C,0,.38,0,g,1.3,.9,1);sp(.26,C,0,.72,.36,g);bx(.5,.04,.14,D2,0,.64,0,g);bx(.1,.1,.6,C,0,.52,-.58,g);
+[-.14,.14].forEach(x=>{const e=new THREE.Mesh(new THREE.ConeGeometry(.09,.2,4),M(C));e.position.set(x,.98,.36);g.add(e);sp(.035,0x111118,x*.8,.76,.58,g)});
+sp(.04,0xff8fa0,0,.7,.61,g);return g}
+function tag(txt){const k=document.createElement('canvas');k.width=128;k.height=40;const x=k.getContext('2d');x.fillStyle='rgba(29,27,58,.85)';x.fillRect(0,0,128,40);x.fillStyle='#fff4e0';x.font='bold 24px sans-serif';x.textAlign='center';x.fillText(txt,64,28);
+const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(k)}));s.scale.set(1.3,.4,1);s.position.set(0,1.6,0);return s}
+const cats=[mkCat(0xff9a3c,0xe07a1e),mkCat(0x8d98a8,0x5d6676)];
+cats[0].add(tag('Nishi'));cats[1].add(tag('Noya'));
+cats.forEach((c,i)=>{c.position.set(i?-1.7:1.7,.15,.9);sc.add(c)});
+/* intro */
+function lt(n){LT.forEach((l,i)=>l.material.color.setHex(i<n?0xff2a2a:0x401010))}
+lt(0);
+const IT=[[.3,'Dicen que la vida es una carrera…'],[3.2,'Javi prefiere apostar por todos los caminos.'],[6,'<b>JAVI GP</b>Una carrera. Muchas decisiones.']],LTM=[7,7.6,8.2,8.8,9.4];
+function beep(f,d){if(!AC)return;try{const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
+function introStep(){const I=intro,tx=$('#itx');
+while(I.i<IT.length&&I.t>=IT[I.i][0]){tx.innerHTML=IT[I.i][1];tx.classList.add('on');if(I.i<2)setTimeout(()=>tx.classList.remove('on'),2300);I.i++}
+while(I.l<LTM.length&&I.t>=LTM[I.l]){I.l++;lt(I.l);beep(440,.2)}
+if(!I.go&&I.t>=10.6){I.go=1;lt(0);beep(880,.7);tx.innerHTML='<b>¡YA!</b>';tx.classList.add('on')}
+if(I.t>=12){endIntro();return}
+const k=Math.min(I.t/8,1),e=k*k*(3-2*k);
+cam.position.set(9*(1-e),11-4.5*e,(END+16)*(1-e)+9*e);look.set(0,3-2*e,END*(1-e)-5*e);cam.lookAt(look)}
+function endIntro(){intro=null;$('#cin').hidden=true;$('#itx').classList.remove('on');lt(0);start()}
 const clock=new THREE.Clock(),look=new THREE.Vector3(0,1,-5);
 function tick(){requestAnimationFrame(tick);const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
-if(mv){mv.t+=dt*3.4;const k=Math.min(mv.t,1);pw.position.lerpVectors(mv.a,mv.b,k);pw.position.y+=Math.sin(k*Math.PI)*.9;if(k>=1){const c=mv.cb;mv=null;c()}}
-else pw.rotation.y=Math.sin(t*1.6)*.12;
-const p=pw.position;cam.position.lerp(new THREE.Vector3(p.x*.5,6.5,p.z+9),.06);look.lerp(new THREE.Vector3(p.x,1,p.z-5),.08);cam.lookAt(look);
-cat.position.lerp(new THREE.Vector3(p.x+1.7,.15,p.z+.9),.05);cat.rotation.y=Math.sin(t*2)*.3;
+if(mv){pw.rotation.y=Math.PI;mv.t+=dt*3.4;const k=Math.min(mv.t,1);pw.position.lerpVectors(mv.a,mv.b,k);pw.position.y+=Math.sin(k*Math.PI)*.9;if(k>=1){const c=mv.cb;mv=null;c()}}
+else pw.rotation.y=Math.PI+Math.sin(t*1.6)*.12;
+const p=pw.position;if(intro){intro.t+=dt;introStep()}else{cam.position.lerp(new THREE.Vector3(p.x*.5,6.5,p.z+9),.06);look.lerp(new THREE.Vector3(p.x,1,p.z-5),.08);cam.lookAt(look)}
+cats.forEach((c,i)=>{c.position.lerp(new THREE.Vector3(p.x+(i?-1.7:1.7),.15,p.z+.5+i*.4),.05);c.rotation.y=Math.PI+Math.sin(t*2+i)*.25});
 R.render(sc,cam)}
 tick();
 const hop=(a,b,cb)=>{mv={a:P(a),b:P(b),t:0,cb}};
 
 /* juego */
-function hud(){const v=Math.max(0,S.v);$('#hud').innerHTML=`<span class=chip>Casilla ${pos}/${T}</span><span class=chip>${LV[st()]}</span><span class=chip>💶 ${S.d}</span><span class=chip>😄 ${S.a}/100</span><span class=chip>⚡ ${S.e}/100</span><span class=chip>🃏 ${S.c}</span><span class=chip>${'❤️'.repeat(v)}${'🖤'.repeat(5-v)}</span>`}
+function hud(){const v=Math.max(0,S.v);$('#hud').innerHTML=`<span class=chip>Casilla ${pos}/${T}</span><span class=chip>${LV[st()]}</span><span class=chip>💶 ${S.d}</span><span class=chip>😄 ${S.a}/100</span><span class=chip>⚡ ${S.e}/100</span><span class=chip>🃏 ${S.c}</span><span class=chip>🍦 ${S.m}</span><span class=chip>${'❤️'.repeat(v)}${'🖤'.repeat(5-v)}</span>`}
 function card(h){$('#ov').innerHTML='<div class="card">'+h+'</div>';$('#ov').hidden=false}
 function close(){$('#ov').hidden=true;busy=false;$('#roll').disabled=false}
-function home(){card(`<h1>Las Mil Vidas de Javi</h1><p class=sub>Un Javi. Diez destinos posibles.</p><p>Tira el dado y elige entre cartas, motos, streamers y cinco gatos exigentes. ¿En qué universo acabará esta vez?</p><button class="btn" id=pl>Jugar</button><button class="btn sec" id=un>Mis universos (${seen.size}/10)</button>`);$('#pl').onclick=start;$('#un').onclick=uni}
-function uni(){card(`<h2>Mis universos (${seen.size}/10)</h2>`+E.map((e,i)=>seen.has(i)?`<div class=u><i>${e[2]}</i><div><b>${e[0]}</b><span>${e[1]}</span></div></div>`:`<div class=u><i>🔒</i><div><b>???</b><span>Aún no descubierto.</span></div></div>`).join('')+`<button class="btn" id=bk>Volver</button>`);$('#bk').onclick=home}
-function start(){S={d:500,a:60,e:60,c:0,v:5};pos=0;mv=null;decks=EV.map(g=>g.slice().sort(()=>Math.random()-.5));pw.position.copy(P(0));cat.position.set(1.6,.15,.9);$('#dice').textContent='';hud();$('#hud').hidden=false;$('#dock').hidden=false;close()}
-$('#roll').onclick=()=>{if(busy)return;busy=true;$('#roll').disabled=true;let n=0;const iv=setInterval(()=>{$('#dice').textContent=1+Math.floor(Math.random()*6);if(++n>9){clearInterval(iv);const r=1+Math.floor(Math.random()*6);$('#dice').textContent=r;setTimeout(()=>go(r),300)}},70)};
+function home(){card(`<h1>Javi GP</h1><p class=sub>Una carrera. Muchas decisiones.</p><p>Tira el dado, avanza por el circuito y toma decisiones que afectan a tu dinero, ánimo y energía. Cada partida puede terminar en un final distinto.</p><button class="btn" id=pl>Jugar</button><button class="btn sec" id=un>Mis finales (${seen.size}/12)</button>`);$('#pl').onclick=play;$('#un').onclick=uni}
+function uni(){card(`<h2>Mis finales (${seen.size}/12)</h2>`+E.map((e,i)=>seen.has(i)?`<div class=u><i>${e[2]}</i><div><b>${e[0]}</b><span>${e[1]}</span></div></div>`:`<div class=u><i>🔒</i><div><b>???</b><span>Aún no descubierto.</span></div></div>`).join('')+`<button class="btn" id=bk>Volver</button>`);$('#bk').onclick=home}
+function start(){S={d:500,a:60,e:60,c:0,v:5,m:0};pos=0;mv=null;decks=EV.map(g=>g.slice().sort(()=>Math.random()-.5));pw.position.copy(P(0));cats.forEach((c,i)=>c.position.set(i?-1.7:1.7,.15,.9));$('#dice').classList.remove('go');$('#dice').style.transform='rotateX(-28deg) rotateY(38deg)';rx=-28;ry=38;hud();$('#hud').hidden=false;$('#dock').hidden=false;close()}
+$('#roll').onclick=()=>{if(busy)return;busy=true;$('#roll').disabled=true;
+const r=1+Math.floor(Math.random()*6),m={1:[0,0],6:[0,180],2:[0,-90],5:[0,90],3:[-90,0],4:[90,0]}[r];
+rx=rx-(((rx%360)+360)%360)+720+m[0];ry=ry-(((ry%360)+360)%360)+1080+m[1];
+const d=$('#dice'),w=$('#dw');d.classList.add('go');d.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`;
+w.classList.remove('hp');void w.offsetWidth;w.classList.add('hp');beep(300,.08);
+setTimeout(()=>go(r),1500)};
+(function(){const PP={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};let h='';
+for(let n=1;n<=6;n++){h+=`<div class="fc f${n}" data-n="${n}">`;for(let c=0;c<9;c++)h+=PP[n].includes(c)?'<i></i>':'<u></u>';h+='</div>'}$('#dice').innerHTML=h})();
+$('#skip').onclick=()=>{if(intro)endIntro()};
+function play(){if(seenIntro)return start();seenIntro=true;try{AC=new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch(e){}
+$('#ov').hidden=true;$('#cin').hidden=false;pw.position.copy(P(0));intro={t:0,i:0,l:0,go:0}}
 function go(r){if(r<=0||pos>=T)return land();hop(pos,pos+1,()=>{pos++;hud();go(r-1)})}
 function land(){if(pos>=T)return fin();const ev=decks[st()].pop();
 if(!ev){S.a=Math.min(100,S.a+5);hud();card(`<h2>Casilla tranquila</h2><p>Un respiro entre eventos.</p><div class=fx><span>+5 Ánimo</span></div><button class="btn" id=ok>Seguir</button>`);$('#ok').onclick=close;return}
@@ -171,14 +219,14 @@ card(`<h2>${ev[0]}</h2><p class=lv>${LV[st()]}, casilla ${pos}</p><p>${ev[1]}</p
 document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>pick(ev[2][+b.dataset.i]))}
 function pick(o){let f=o[2];if(Array.isArray(f))f=f[Math.random()<.5?0:1];const out=[];
 for(const k in f){S[k]+=f[k];out.push(`<span>${f[k]>0?'+':''}${f[k]} ${L[k]}</span>`)}
-S.a=Math.min(100,S.a);S.e=Math.min(100,S.e);S.d=Math.max(0,S.d);S.c=Math.max(0,S.c);S.v=Math.min(5,S.v);
+S.a=Math.min(100,S.a);S.e=Math.min(100,S.e);S.d=Math.max(0,S.d);S.c=Math.max(0,S.c);S.m=Math.max(0,S.m);S.v=Math.min(5,S.v);
 let note='';if(S.a<=0||S.e<=0){S.v--;if(S.a<=0)S.a=40;if(S.e<=0)S.e=40;note='<p class=warn>¡Colapso! Pierdes 1 vida y recuperas fuerzas.</p>'}
 hud();card(`<h2>${o[0]}</h2><p>${o[1]}</p><div class=fx>${out.join('')}</div>${note}<button class="btn" id=ok>Seguir</button>`);
 $('#ok').onclick=()=>S.v<=0?fin():close()}
-function pickEnd(){if(S.v<=0)return 0;if(S.c>=7)return 1;if(S.d>=1200)return 2;if(S.a>=85)return 3;if(S.e>=85)return 4;if(S.c>=4)return 5;if(S.d<=100)return 6;if(S.a<=25)return 7;if(S.e<=25)return 8;return 9}
+function pickEnd(){if(S.v<=0)return 0;if(S.c>=7)return 1;if(S.m>=5)return 2;if(S.d>=1200)return 3;if(S.a>=85)return 4;if(S.e>=85)return 5;if(S.c>=4)return 6;if(S.a>=65&&S.d>=400)return 7;if(S.d<=100)return 8;if(S.a<=25)return 9;if(S.e<=25)return 10;return 11}
 function fin(){const i=pickEnd(),e=E[i];seen.add(i);try{localStorage.setItem('mvj',JSON.stringify([...seen]))}catch(x){}
 $('#hud').hidden=true;$('#dock').hidden=true;
-card(`<div class=em>${e[2]}</div><h2>${e[0]}</h2><p>${e[1]}</p><p class=lv>Final ${i+1} de 10. Universos descubiertos: ${seen.size}/10.</p><button class="btn" id=ag>Jugar otra vez</button><button class="btn sec" id=un>Mis universos</button>`);
+card(`<div class=em>${e[2]}</div><h2>${e[0]}</h2><p>${e[1]}</p><p class=lv>Final ${i+1} de 12. Finales descubiertos: ${seen.size}/12.</p><button class="btn" id=ag>Jugar otra vez</button><button class="btn sec" id=un>Mis finales</button>`);
 $('#ag').onclick=start;$('#un').onclick=uni}
-S={d:500,a:60,e:60,c:0,v:5};home();
+S={d:500,a:60,e:60,c:0,v:5,m:0};home();
 </script></body></html>
